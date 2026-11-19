@@ -1,0 +1,32 @@
+{
+ "rule: dist=1 & cand complaints": {
+  "PR-AUC": 0.1095,
+  "ROC-AUC": 0.6025,
+  "precision@top5%": 0.141,
+  "recall@top5%": 0.081,
+  "precision@top10%": 0.132,
+  "recall@top10%": 0.153,
+  "precision@top20%": 0.122,
+  "recall@top20%": 0.281
+ },
+ "logistic": {
+  "PR-AUC": 0.1709,
+  "ROC-AUC": 0.6748,
+  "precision@top5%": 0.229,
+  "recall@top5%": 0.132,
+  "precision@top10%": 0.227,
+  "recall@top10%": 0.262,
+  "precision@top20%": 0.191,
+  "recall@top20%": 0.441
+ },
+ "lightgbm": {
+  "PR-AUC": 0.1639,
+  "ROC-AUC": 0.7038,
+  "precision@top5%": 0.204,
+  "recall@top5%": 0.118,
+  "precision@top10%": 0.176,
+  "recall@top10%": 0.203,
+  "precision@top20%": 0.185,
+  "recall@top20%": 0.428
+ }
+}

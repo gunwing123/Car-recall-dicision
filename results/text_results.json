@@ -1,0 +1,42 @@
+{
+ "base (no text)": {
+  "valid PR-AUC": 0.0335,
+  "test PR-AUC": 0.0429,
+  "test ROC-AUC": 0.8325,
+  "P@100": 0.0935,
+  "R@100": 0.0422,
+  "P@500": 0.0621,
+  "R@500": 0.14,
+  "test PR-AUC 95% CI": "0.0389-0.0492"
+ },
+ "+ keywords": {
+  "valid PR-AUC": 0.0336,
+  "test PR-AUC": 0.0431,
+  "test ROC-AUC": 0.8324,
+  "P@100": 0.0916,
+  "R@100": 0.0413,
+  "P@500": 0.0621,
+  "R@500": 0.14,
+  "test PR-AUC 95% CI": "0.0387-0.0482"
+ },
+ "+ keywords + topics": {
+  "valid PR-AUC": 0.0343,
+  "test PR-AUC": 0.0415,
+  "test ROC-AUC": 0.8313,
+  "P@100": 0.0882,
+  "R@100": 0.0398,
+  "P@500": 0.0633,
+  "R@500": 0.1426,
+  "test PR-AUC 95% CI": "0.0361-0.0463"
+ },
+ "+ recall-related text (leaky check)": {
+  "valid PR-AUC": 0.0347,
+  "test PR-AUC": 0.0417,
+  "test ROC-AUC": 0.8316,
+  "P@100": 0.0894,
+  "R@100": 0.0403,
+  "P@500": 0.0634,
+  "R@500": 0.143,
+  "test PR-AUC 95% CI": "0.0360-0.0467"
+ }
+}

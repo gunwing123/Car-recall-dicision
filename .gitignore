@@ -1,0 +1,5 @@
+data/
+*.txt.zip
+FLAT_*.txt
+*.pkl
+__pycache__/
