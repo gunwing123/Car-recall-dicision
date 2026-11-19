@@ -21,6 +21,7 @@ python src/train.py data          # 규칙 / 로지스틱 / LightGBM
 python src/expansion.py data      # 리콜 범위 확대 예측
 python src/text_features.py data  # 불만 텍스트 키워드·토픽 (메모리 약 4GB)
 python src/train_text.py data     # 텍스트 추가 효과(H2) 검증
+CONSUMER24_KEY=발급키 python src/fetch_kr_recall.py   # (선택) 소비자24 국내 자동차 리콜 수집
 ```
 
 ## 설정

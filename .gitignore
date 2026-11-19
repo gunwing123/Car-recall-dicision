@@ -3,3 +3,5 @@ data/
 FLAT_*.txt
 *.pkl
 __pycache__/
+data/kr_recall_*.csv
+.env
