@@ -2,8 +2,9 @@ import pandas as pd, numpy as np, sys, lightgbm as lgb, json
 from sklearn.metrics import average_precision_score, roc_auc_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
-d=sys.argv[1]; HZ=12; WIN=3
+d=sys.argv[1]; HZ=12; WIN=3; FINE=len(sys.argv)>2 and sys.argv[2]=="fine"
 def norm(df):
+    if "comp" in df: df["compfull"]=df["comp"].str.strip().str.upper()
     for k in ["make","year"]: df[k]=df[k].str.strip().str.upper()
     df["model"]=df["model"].str.upper().str.replace(r"[^A-Z0-9]","",regex=True)
     df["comp"]=df["comp"].str.split(":").str[0].str.strip().str.upper()
@@ -23,7 +24,7 @@ c["sev"]=((c.crash=="Y")|(c.fire=="Y")|(pd.to_numeric(c.inj,errors="coerce").fil
 cm=c.groupby(["make","model","comp","year","m"]).agg(n=("sev","size"),sev=("sev","sum")).reset_index()
 # events: campaign x make-model-comp
 ev=r.groupby(["campno","make","model","comp"]).agg(m0=("m","min"),ymin=("year","min"),ymax=("year","max"),ny=("year","nunique"),
-   years=("year",lambda s:set(s)),potaff=("potaff","max"),infl=("infl","first")).reset_index()
+   years=("year",lambda s:set(s)),cfs=("compfull",lambda s:set(s)),potaff=("potaff","max"),infl=("infl","first")).reset_index()
 # model-year universe per make-model (seen anywhere)
 uni=pd.concat([r[["make","model","year"]],c[["make","model","year"]]]).drop_duplicates()
 U=uni.groupby(["make","model"]).year.apply(set).to_dict()
@@ -31,12 +32,13 @@ rows=[]
 for e in ev.itertuples(index=False):
     for y in U.get((e.make,e.model),()):
         if y in e.years or y<e.ymin-WIN or y>e.ymax+WIN or y>e.m0//12+1: continue
-        rows.append((e.campno,e.make,e.model,e.comp,e.m0,y,e.ymin,e.ymax,e.ny,e.potaff,e.infl))
-C=pd.DataFrame(rows,columns=["campno","make","model","comp","m0","cy","ymin","ymax","ny","potaff","infl"])
+        rows.append((e.campno,e.make,e.model,e.comp,e.m0,y,e.ymin,e.ymax,e.ny,e.potaff,e.infl,e.cfs))
+C=pd.DataFrame(rows,columns=["campno","make","model","comp","m0","cy","ymin","ymax","ny","potaff","infl","cfs"])
 C["dist"]=np.where(C.cy<C.ymin,C.ymin-C.cy,C.cy-C.ymax)
 # label: a DIFFERENT campaign recalls (make,model,comp,cy) within (m0, m0+HZ]
-rl=r[["campno","make","model","comp","year","m"]].rename(columns={"year":"cy","campno":"camp2","m":"m2"})
+rl=r[["campno","make","model","comp","compfull","year","m"]].rename(columns={"year":"cy","campno":"camp2","m":"m2"})
 L=C.merge(rl,on=["make","model","comp","cy"]); L=L[(L.camp2!=L.campno)]
+if FINE: L=L[[cf in s for cf,s in zip(L.compfull,L.cfs)]]; print("label mode: FINE (same full component name)")
 fut=L[(L.m2>L.m0)&(L.m2<=L.m0+HZ)].groupby(["campno","make","model","comp","cy"]).size().rename("y")
 past=L[(L.m2<=L.m0)&(L.m2>L.m0-24)].groupby(["campno","make","model","comp","cy"]).size().rename("cand_prior_rcl24")
 C=C.join(fut,on=["campno","make","model","comp","cy"]).join(past,on=["campno","make","model","comp","cy"])
@@ -66,7 +68,7 @@ C["cand_sev_rate"]=C.cand_sev12/C.cand_n12.clip(lower=1)
 C["side_after"]=(C.cy>C.ymax).astype(int); C["age_cand"]=C.m0//12-C.cy
 C["infl_odi"]=(C.infl.str.strip()!="MFR").astype(int); C["log_potaff"]=np.log1p(C.potaff.fillna(0))
 C["ev_year"]=C.m0//12
-C.to_pickle(f"{d}/expansion.pkl")
+C=C.drop(columns="cfs"); C.to_pickle(f"{d}/expansion{'_fine' if FINE else ''}.pkl")
 print("events (campaign x make-model-comp):",len(ev)," candidates:",len(C)," positives:",int(C.y.sum()),f"base rate {C.y.mean():.3%}")
 ev2=C.groupby("campno").y.max(); print(f"campaigns with >=1 later expansion within {HZ}m: {ev2.mean():.2%} of {len(ev2)}")
 print("base rate by distance:",C.groupby("dist").y.mean().round(4).to_dict())
@@ -104,4 +106,4 @@ print("lgb best iter",m.best_iteration)
 ev_("lightgbm",m.predict(T[ff],num_iteration=m.best_iteration))
 print(pd.DataFrame(res).T.to_string())
 imp=pd.Series(m.feature_importance("gain"),index=ff).sort_values(ascending=False); print((imp/imp.sum()).round(3).head(10).to_string())
-json.dump(res,open(f"{d}/expansion_results.json","w"),ensure_ascii=False,indent=1)
+json.dump(res,open(f"{d}/expansion{'_fine' if FINE else ''}_results.json","w"),ensure_ascii=False,indent=1)

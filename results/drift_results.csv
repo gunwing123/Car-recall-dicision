@@ -1,0 +1,25 @@
+test_year,scheme,model,pr_auc,p_at_100,base
+2022,fixed (2010-2019),logistic,0.0244,0.0408,0.0066
+2022,fixed (2010-2019),lightgbm,0.0221,0.0183,0.0066
+2022,expanding (2010~y-1),logistic,0.0288,0.0467,0.0066
+2022,expanding (2010~y-1),lightgbm,0.026,0.0258,0.0066
+2022,sliding 5y,logistic,0.028,0.0408,0.0066
+2022,sliding 5y,lightgbm,0.0271,0.025,0.0066
+2023,fixed (2010-2019),logistic,0.0559,0.1208,0.0087
+2023,fixed (2010-2019),lightgbm,0.0357,0.0467,0.0087
+2023,expanding (2010~y-1),logistic,0.0627,0.1283,0.0087
+2023,expanding (2010~y-1),lightgbm,0.0499,0.1,0.0087
+2023,sliding 5y,logistic,0.0606,0.1108,0.0087
+2023,sliding 5y,lightgbm,0.048,0.0867,0.0087
+2024,fixed (2010-2019),logistic,0.0491,0.1175,0.0083
+2024,fixed (2010-2019),lightgbm,0.035,0.0167,0.0083
+2024,expanding (2010~y-1),logistic,0.0664,0.1467,0.0083
+2024,expanding (2010~y-1),lightgbm,0.0583,0.115,0.0083
+2024,sliding 5y,logistic,0.0712,0.1508,0.0083
+2024,sliding 5y,lightgbm,0.0598,0.1108,0.0083
+2025,fixed (2010-2019),logistic,0.0385,0.0775,0.0095
+2025,fixed (2010-2019),lightgbm,0.0339,0.0258,0.0095
+2025,expanding (2010~y-1),logistic,0.0583,0.0967,0.0095
+2025,expanding (2010~y-1),lightgbm,0.0636,0.1108,0.0095
+2025,sliding 5y,logistic,0.0602,0.1167,0.0095
+2025,sliding 5y,lightgbm,0.0567,0.1067,0.0095
