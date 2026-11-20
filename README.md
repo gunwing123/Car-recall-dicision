@@ -27,6 +27,14 @@ CONSUMER24_KEY=발급키 python src/fetch_kr_recall.py   # (선택) 소비자24 
 python src/kr_vs_us.py data/kr_recall_auto.csv data         # 한·미 리콜 비교 (H4)
 python src/us_model_to_kr.py data data/kr_recall_auto.csv   # 미국 모델로 국내 수입차 리콜 사전 포착 (H5)
 python src/figures.py data figures                          # 발표용 그래프
+
+# ---- 검증 보강 (감사 결과 반영) ----
+python src/manual_verify.py data/kr_recall_auto.csv data           # 한·미 매칭 수기 검증표 생성 -> same_defect 열에 Y/N/? 입력
+python src/manual_verify.py data/kr_recall_auto.csv data score     # 입력 결과로 진매칭률(precision) 계산
+python src/ablation.py data                                        # LightGBM 폭락 원인 분해 (피처 묶음 제거 실험)
+python src/add_prr.py data && python src/ablation.py data prr      # PRR(비례보고비율) 피처 추가 실험
+python src/triage.py data data/kr_recall_auto.csv                  # 오경보 해부 + 2단계 선별 큐 + 수입차 워치리스트
+python src/case_study.py data BMW X5 2019 "ELECTRICAL SYSTEM" 202603   # 차종-부품 사례 타임라인 그림
 ```
 
 ## 설정
@@ -99,3 +107,18 @@ NHTSA 조사로 시작된 리콜은 확대율이 더 높다(엄격 기준 7.4% v
 - 예측력은 인과가 아님
 
 그래프 전체: `figures/`
+
+
+## 검증 보강 내역 (코드 감사 반영)
+| 문제 | 수정 |
+| --- | --- |
+| `train.py`·`train_text.py` 분할 경계에 6개월 엠바고 없음 (라벨 (t,t+6]) | 학습 <=2019-06 / 검증 2020-01~2021-06 / 테스트 >=2022-01 |
+| `expansion.py` 12개월 라벨 엠바고 없음, 우측 중도절단, 초기 리콜 당월 불만 혼입 | 학습 m0<=2017-12 / 검증 2019~2020 / 테스트 m0>=2022-01, `m0+12 > 마지막 리콜월` 제외, 불만은 m0 이전만 사용 |
+| `text_features.py` 대문자 텍스트 + `lowercase=False` -> 불용어 미제거 | 불용어를 대문자로 변환 + 콜센터 상용구 제거 |
+| 같은 불만(ODINO)의 하위 부품 중복 집계 | `build_panel.py`·`text_features.py`·`expansion.py`에서 ODINO 기준 중복 제거 |
+| `overlap.py`·`control.py` 하드코딩 경로, `us_model_to_kr.py`의 `eval()` | `{data}/` 인자 사용, 공통 모듈 `kr_common.py` import |
+| `drift.py` LightGBM 설정이 `train.py`와 다름 (200트리 고정) | 동일 파라미터 + early stopping(학습 창 마지막 12개월 검증, 6개월 엠바고) |
+| H4 비대칭 탐색 창(-3년/+1년) | `kr_vs_us.py`가 대칭 창(±6/12/24개월)·우측 절단 제외 민감도 표 출력 |
+| H5 비교 기준 불일치(다중 키 합집합 vs 단일 키) | 같은 그룹을 다른 달에 평가하는 placebo, 1단계/2단계 분리, 리드타임 분포 출력 |
+
+> 주의: 위 수정 후에는 **모든 수치(README·Notion·그래프)를 다시 계산**해야 합니다. `results/`의 기존 파일은 수정 전 결과입니다.

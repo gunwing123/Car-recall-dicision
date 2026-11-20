@@ -17,7 +17,8 @@ num=["n","n3","n6","n12","n24","n_prev6","n_prev12","n_cum","crash12","fire12","
      "mon_since_first","age","prior_rcl","sib_n12","mc_n12","mmc_rcl12"]
 cat=["comp_c","make_c"]
 Y=lambda a,b:(a)*12+b-1
-tr=P.m<=Y(2019,12); va=(P.m>=Y(2020,1))&(P.m<=Y(2021,12)); te=P.m>=Y(2022,1)
+# 라벨이 (t, t+6]이므로 분할 경계마다 6개월 엠바고: 학습 라벨이 검증 구간 리콜을, 검증 라벨이 테스트 구간 리콜을 참조하지 않게 함
+tr=P.m<=Y(2019,6); va=(P.m>=Y(2020,1))&(P.m<=Y(2021,6)); te=P.m>=Y(2022,1)
 print({k:(int(s.sum()),int(P.y[s].sum())) for k,s in [("train",tr),("valid",va),("test",te)]})
 
 scores={}

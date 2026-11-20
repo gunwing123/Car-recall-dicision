@@ -15,9 +15,9 @@ r["dt"]=pd.to_datetime(r.rcdate,format="%Y%m%d",errors="coerce"); r=r.dropna(sub
 r["m"]=r.dt.dt.year*12+r.dt.dt.month-1; r["year"]=r.year.astype(int)
 r["potaff"]=pd.to_numeric(r.potaff,errors="coerce")
 r=r.drop_duplicates(["campno","make","model","year","comp"])
-c=pd.read_csv(f"{d}/FLAT_CMPL.txt",sep="\t",header=None,usecols=[3,4,5,6,8,9,11,15],names=["make","model","year","crash","fire","inj","comp","datea"],
+c=pd.read_csv(f"{d}/FLAT_CMPL.txt",sep="\t",header=None,usecols=[1,3,4,5,6,8,9,11,15],names=["odino","make","model","year","crash","fire","inj","comp","datea"],
    dtype=str,encoding="latin-1",quoting=3,on_bad_lines="skip")
-norm(c); c=c[c.year.str.fullmatch(r"(19|20)\d\d")]; c["year"]=c.year.astype(int)
+norm(c); c=c[~(c.duplicated(["odino","make","model","year","comp"])&c.odino.notna())]; c=c[c.year.str.fullmatch(r"(19|20)\d\d")]; c["year"]=c.year.astype(int)
 c["dt"]=pd.to_datetime(c.datea,format="%Y%m%d",errors="coerce"); c=c.dropna(subset=["dt"]); c=c[c.dt>="2007-01-01"]
 c["m"]=c.dt.dt.year*12+c.dt.dt.month-1
 c["sev"]=((c.crash=="Y")|(c.fire=="Y")|(pd.to_numeric(c.inj,errors="coerce").fillna(0)>0)).astype(int)
@@ -43,14 +43,14 @@ fut=L[(L.m2>L.m0)&(L.m2<=L.m0+HZ)].groupby(["campno","make","model","comp","cy"]
 past=L[(L.m2<=L.m0)&(L.m2>L.m0-24)].groupby(["campno","make","model","comp","cy"]).size().rename("cand_prior_rcl24")
 C=C.join(fut,on=["campno","make","model","comp","cy"]).join(past,on=["campno","make","model","comp","cy"])
 C["y"]=C.y.notna().astype(int); C["cand_prior_rcl24"]=C.cand_prior_rcl24.fillna(0)
-# complaint features up to m0 (inclusive)
+# complaint features strictly before m0 (lag 0 = 직전 달)
 def agg(keys,yearcol,pref,yearsel=None):
     pass
 cmk=cm.set_index(["make","model","comp"])
 def cfeat(df):
     out=[]
     g=cm.merge(df[["campno","make","model","comp","m0","cy","ymin","ymax"]].drop_duplicates(),on=["make","model","comp"])
-    g=g[g.m<=g.m0]; g["lag"]=g.m0-g.m
+    g=g[g.m<g.m0]; g["lag"]=g.m0-g.m-1   # 초기 리콜 당월(m0) 이후 불만 제외 (사후 불만 혼입 방지)
     cand=g[g.year==g.cy]; rec=g[(g.year>=g.ymin)&(g.year<=g.ymax)]
     k=["campno","make","model","comp","cy"]
     f=pd.DataFrame(index=df.set_index(k).index)
@@ -79,7 +79,12 @@ print(C.groupby("ev_year").y.agg(["size","mean"]).round(4).T.to_string())
 feats=["dist","side_after","age_cand","ny","log_potaff","infl_odi","cand_prior_rcl24","cand_n3","cand_n12","cand_n24","cand_sev12","cand_ncum",
        "rec_n3","rec_n12","rec_n24","rec_sev12","rec_ncum","rec_n12_per_year","cand_vs_rec","cand_growth","cand_sev_rate"]
 C["comp_c"]=C.comp.astype("category")
-tr=C.ev_year<=2018; va=C.ev_year.between(2019,2020); te=C.ev_year.between(2021,2025)
+# 라벨 지평 HZ=12개월 -> 분할 경계마다 12개월 엠바고, 그리고 우측 중도절단(라벨 관측 불가) 이벤트 제외
+Y_=lambda a,b:a*12+b-1
+RMAX=int(r.m.max()); cens=C.m0+HZ>RMAX
+print(f"right-censored events dropped (m0+{HZ} > last recall month): {int(cens.sum())}")
+C=C[~cens].copy()
+tr=C.m0<=Y_(2017,12); va=(C.m0>=Y_(2019,1))&(C.m0<=Y_(2020,12)); te=C.m0>=Y_(2022,1)
 print({k:(int(s.sum()),int(C.y[s].sum()),round(C.y[s].mean(),4)) for k,s in [("train",tr),("valid",va),("test",te)]})
 T=C[te]; res={}
 def ev_(name,s):

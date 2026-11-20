@@ -20,8 +20,10 @@ def sample(mask,nneg=700000):
     idx=P.index[mask]; y=P.y.values[mask]
     neg=idx[y==0]; neg=rs.choice(neg,min(nneg,len(neg)),replace=False)
     return np.concatenate([idx[y==1],neg]), len(neg)/max(1,(y==0).sum())
-prm=dict(objective="binary",learning_rate=0.05,num_leaves=15,min_data_in_leaf=1000,feature_fraction=0.7,bagging_fraction=0.7,bagging_freq=1,
-         lambda_l2=10,cat_smooth=50,cat_l2=50,min_data_per_group=1000,verbose=-1,seed=0,num_threads=4)
+# train.py와 동일한 LightGBM 설정 + 동일한 early stopping 절차 (이전: lr 0.05 / min_data 1000 / 검증 없이 200트리 고정)
+prm=dict(objective="binary",learning_rate=0.03,num_leaves=15,min_data_in_leaf=2000,feature_fraction=0.7,bagging_fraction=0.7,bagging_freq=1,
+         lambda_l2=10,cat_smooth=50,cat_l2=50,min_data_per_group=2000,verbose=-1,seed=0,num_threads=4)
+VAL_M=12; GAP=6   # 각 학습 창의 마지막 12개월을 early-stopping 검증으로, 그 앞과는 6개월 엠바고
 res=[]
 for ty in [2022,2023,2024,2025]:
     te=(P.m>=Y(ty,1))&(P.m<=Y(ty,12)); T=P[te]
@@ -33,8 +35,11 @@ for ty in [2022,2023,2024,2025]:
         Xs=XL(S); sc=StandardScaler().fit(Xs)
         lr=LogisticRegression(max_iter=300,C=0.5).fit(sc.transform(Xs),S.y)
         p_lr=lr.predict_proba(sc.transform(XL(T)))[:,1]
-        m=lgb.train(prm,lgb.Dataset(S[feats],S.y),200)
-        p_gb=m.predict(T[feats])
+        mx=int(P.m[mask].max()); trm=mask&(P.m<=mx-VAL_M-GAP); vam=mask&(P.m>mx-VAL_M)
+        jj,_=sample(trm.values); G=P.loc[jj]; V=P[vam]
+        dtr=lgb.Dataset(G[feats],G.y); dva=lgb.Dataset(V[feats],V.y,reference=dtr)
+        m=lgb.train(prm,dtr,1500,valid_sets=[dva],callbacks=[lgb.early_stopping(150,verbose=False)])
+        p_gb=m.predict(T[feats],num_iteration=m.best_iteration)
         for mn,p in [("logistic",p_lr),("lightgbm",p_gb)]:
             tt=T[["m","y"]].copy(); tt["s"]=p; tt["r"]=tt.groupby("m").s.rank(ascending=False,method="first")
             hit=tt[tt.r<=100].groupby("m").y.sum()

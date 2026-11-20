@@ -1,6 +1,7 @@
 import pandas as pd, numpy as np, sys, time, gc, warnings
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import NMF
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 warnings.filterwarnings("ignore")
 d=sys.argv[1]; t0=time.time(); NT=12
 key=["make","model","year","comp"]
@@ -16,9 +17,12 @@ kw={"kw_stall":r"\bSTALL|SHUT(S|TING)? (OFF|DOWN)|ENGINE (DIED|DIES|QUIT)|LOSS O
     "kw_repeat":r"AGAIN|SECOND TIME|THIRD TIME|REPEATED|MULTIPLE TIMES|SEVERAL TIMES",
     "kw_dealer_noremedy":r"(DEALER|DEALERSHIP).{0,60}(COULD NOT|COULDN'T|UNABLE|NO FIX|NOT FIX|NOT DUPLICATE)",
     "kw_known_issue":r"KNOWN (ISSUE|PROBLEM|DEFECT)|COMMON (ISSUE|PROBLEM)|OTHER OWNERS|MANY OWNERS"}
+# NHTSA 콜센터 상용구(토픽을 점령하던 단어)도 함께 제거. 텍스트가 대문자이므로 불용어도 대문자로 변환해야 실제로 제거됨
+BOILER={"CONTACT","CONTACTED","OWNER","OWNERS","OWNS","MILEAGE","MANUFACTURER","STATED","STATES","CONSUMER","CONSUMERS","VEHICLE","VEHICLES","INFORMED","REPORTED","TOLD","DEALER","DEALERSHIP"}
+STOP=sorted({w.upper() for w in ENGLISH_STOP_WORDS}|BOILER)
 STRIP=r"\bRECALL\w*|\bCAMPAIGN\w*|\bNHTSA\b|TL\*|\*[A-Z]{2}\b"
 def chunks():
-    for c in pd.read_csv(f"{d}/FLAT_CMPL.txt",sep="\t",header=None,usecols=[3,4,5,11,15,19],names=["make","model","year","comp","datea","txt"],
+    for c in pd.read_csv(f"{d}/FLAT_CMPL.txt",sep="\t",header=None,usecols=[1,3,4,5,11,15,19],names=["odino","make","model","year","comp","datea","txt"],
                          dtype=str,encoding="latin-1",quoting=3,on_bad_lines="skip",chunksize=200000):
         for k in ["make","year"]: c[k]=c[k].str.strip().str.upper()
         c["model"]=c["model"].str.upper().str.replace(r"[^A-Z0-9]","",regex=True)
@@ -26,6 +30,7 @@ def chunks():
         dt=pd.to_datetime(c.datea,format="%Y%m%d",errors="coerce")
         c["m"]=dt.dt.year*12+dt.dt.month-1
         c=c[(dt>="2008-01-01")&c.year.fillna("").str.fullmatch(r"(19|20)\d\d")]
+        c=c[~(c.duplicated(["odino","make","model","year","comp"])&c.odino.notna())]  # 한 불만에 같은 상위 부품이 2개 등록된 경우 1건으로
         c=c.merge(K,on=key,how="inner")[["kid","m","txt"]]
         c["txt"]=c.txt.fillna("").str.upper().str.slice(0,1500)
         c["mention_recall"]=c.txt.str.contains(r"RECALL|CAMPAIGN",regex=True).astype(np.int8)
@@ -39,7 +44,7 @@ for c in chunks():
 F=pd.concat(flags,ignore_index=True); S=pd.concat(samp); del flags,samp; gc.collect()
 print("complaints",len(F),"recall-mention share",round(F.mention_recall.mean(),3),"sample",len(S),f"{time.time()-t0:.0f}s",flush=True)
 print("keyword share:",F[list(kw)].mean().round(3).to_dict(),flush=True)
-vec=TfidfVectorizer(max_features=8000,min_df=20,max_df=0.4,stop_words="english",token_pattern=r"(?u)\b[A-Z]{3,}\b",lowercase=False)
+vec=TfidfVectorizer(max_features=8000,min_df=20,max_df=0.4,stop_words=STOP,token_pattern=r"(?u)\b[A-Z]{3,}\b",lowercase=False)
 X=vec.fit_transform(S); del S
 nmf=NMF(n_components=NT,random_state=0,init="nndsvda",max_iter=300).fit(X); del X; gc.collect()
 voc=np.array(vec.get_feature_names_out())

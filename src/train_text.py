@@ -12,7 +12,8 @@ cnt=["n","n3","n6","n12","n24","n_prev6","n_prev12","n_cum","crash12","fire12","
 grw=["growth3_12","growth6_prev6","growth12_prev12"]; rate=["crash_rate12","fire_rate12","inj_rate12","dth_rate12"]
 kw=[c for c in P.columns if c.startswith("kw_")]; tp=[c for c in P.columns if c.startswith("tp") and c!="tp02_r12"]
 P[kw+tp+["tp02_r12","mention_recall_r12"]]=P[kw+tp+["tp02_r12","mention_recall_r12"]].fillna(0)
-tr=P.m<=Y(2019,12); va=(P.m>=Y(2020,1))&(P.m<=Y(2021,12)); te=P.m>=Y(2022,1)
+# 라벨 (t, t+6] -> 경계마다 6개월 엠바고 (train.py와 동일)
+tr=P.m<=Y(2019,6); va=(P.m>=Y(2020,1))&(P.m<=Y(2021,6)); te=P.m>=Y(2022,1)
 def X(D,extra):
     Z=pd.concat([np.log1p(D[cnt].clip(lower=0)),np.log(D[grw]),D[rate+extra],pd.get_dummies(D.comp,prefix="c",dtype=np.float32)],axis=1)
     return Z.astype(np.float32)

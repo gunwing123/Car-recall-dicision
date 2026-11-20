@@ -33,7 +33,7 @@ prof=j.groupby(["g","off"]).n.sum().unstack(0)/U.g.value_counts()
 base=prof.loc[-24:-13].mean()
 norm_=prof/base
 out=pd.DataFrame({"recall_raw":prof["recall"],"control_raw":prof["control"],"recall_norm":norm_["recall"],"control_norm":norm_["control"]})
-out.to_csv("/home/claude/data/control_profile.csv")
+out.to_csv(f"{d}/control_profile.csv")
 print(out.round(3).to_string())
 # unit-level: growth ratio last 6m vs months -24..-13 (monthly avg)
 p=j[j.off.between(-24,-1)].copy()

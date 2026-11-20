@@ -27,7 +27,7 @@ print(f"recall units with any complaint on same key: {matched}/{units} = {matche
 pre=j[j.off.between(-12,-1)].groupby(["campno"]+key).n.sum()
 print(f"units with >=1 complaint in 12m BEFORE recall: {len(pre)}/{units} = {len(pre)/units:.1%}")
 prof=j.groupby("off").n.sum()/units
-prof.to_csv("/home/claude/data/event_profile.csv")
+prof.to_csv(f"{d}/event_profile.csv")
 print(prof.round(3).to_string())
 # top example: biggest pre-recall buildup
 g=j.groupby(["campno"]+key)

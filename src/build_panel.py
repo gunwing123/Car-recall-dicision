@@ -8,9 +8,11 @@ def norm(df):
     for k in ["make","year"]: df[k]=df[k].str.strip().str.upper()
     df["model"]=df["model"].str.upper().str.replace(r"[^A-Z0-9]","",regex=True)
     df["comp"]=df["comp"].str.split(":").str[0].str.strip().str.upper()
-c=pd.read_csv(f"{d}/FLAT_CMPL.txt",sep="\t",header=None,usecols=[3,4,5,6,8,9,10,11,15],
-    names=["make","model","year","crash","fire","inj","dth","comp","datea"],dtype=str,encoding="latin-1",quoting=3,on_bad_lines="skip")
+c=pd.read_csv(f"{d}/FLAT_CMPL.txt",sep="\t",header=None,usecols=[1,3,4,5,6,8,9,10,11,15],
+    names=["odino","make","model","year","crash","fire","inj","dth","comp","datea"],dtype=str,encoding="latin-1",quoting=3,on_bad_lines="skip")
 norm(c)
+n0=len(c); c=c[~(c.duplicated(["odino","make","model","year","comp"])&c.odino.notna())]  # 한 불만(ODINO)에 같은 상위 부품이 여러 하위 부품으로 등록된 중복 제거
+print("complaint rows dedup by ODINO:",n0,"->",len(c))
 c["dt"]=pd.to_datetime(c.datea,format="%Y%m%d",errors="coerce")
 c=c.dropna(subset=["dt"]); c=c[c.dt>="2008-01-01"]
 c=c[c.year.str.fullmatch(r"(19|20)\d\d")]
